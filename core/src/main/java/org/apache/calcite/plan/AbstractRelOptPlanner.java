@@ -101,7 +101,11 @@ public abstract class AbstractRelOptPlanner implements RelOptPlanner {
 
   //~ Methods ----------------------------------------------------------------
 
-  public void clear() {}
+  public void clear() {
+    classes.clear();
+    mapDescToRule.clear();
+    traits.clear();
+  }
 
   public Context getContext() {
     return context;
