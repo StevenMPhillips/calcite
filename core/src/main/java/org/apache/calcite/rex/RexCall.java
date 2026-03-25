@@ -228,8 +228,13 @@ public class RexCall extends RexNode {
       return operands.get(0).isAlwaysFalse();
     case IS_NOT_FALSE:
     case IS_TRUE:
-    case CAST:
       return operands.get(0).isAlwaysTrue();
+    case CAST:
+      // Only delegate to the operand if the result type is also BOOLEAN.
+      // CAST(TRUE AS INTEGER) has isAlwaysTrue() == false even though its
+      // operand is always true, because the result is an INTEGER, not a BOOLEAN.
+      return getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+          && operands.get(0).isAlwaysTrue();
     case SEARCH:
       final Sarg<?> sarg = ((RexLiteral) operands.get(1)).getValueAs(Sarg.class);
       return requireNonNull(sarg, "sarg").isAll()
@@ -250,8 +255,11 @@ public class RexCall extends RexNode {
       return operands.get(0).isAlwaysTrue();
     case IS_NOT_FALSE:
     case IS_TRUE:
-    case CAST:
       return operands.get(0).isAlwaysFalse();
+    case CAST:
+      // Only delegate to the operand if the result type is also BOOLEAN.
+      return getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+          && operands.get(0).isAlwaysFalse();
     case SEARCH:
       final Sarg<?> sarg = ((RexLiteral) operands.get(1)).getValueAs(Sarg.class);
       return requireNonNull(sarg, "sarg").isNone()

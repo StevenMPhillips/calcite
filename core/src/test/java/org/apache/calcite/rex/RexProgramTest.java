@@ -4053,6 +4053,43 @@ class RexProgramTest extends RexProgramTestBase {
   }
 
   /** Unit tests for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7354">[CALCITE-7354]
+   * CAST of boolean literal to non-boolean type should not be isAlwaysTrue/False</a>. */
+  @Test void testIsAlwaysTrueCastBooleanToInteger() {
+    // CAST(TRUE AS INTEGER) is not a boolean expression; isAlwaysTrue() must be false.
+    final RexNode castTrueToInt = abstractCast(trueLiteral, tInt());
+    assertThat("CAST(TRUE AS INTEGER).isAlwaysTrue()",
+        castTrueToInt.isAlwaysTrue(), is(false));
+    assertThat("CAST(TRUE AS INTEGER).isAlwaysFalse()",
+        castTrueToInt.isAlwaysFalse(), is(false));
+  }
+
+  @Test void testIsAlwaysFalseCastBooleanToInteger() {
+    // CAST(FALSE AS INTEGER) is not a boolean expression; isAlwaysFalse() must be false.
+    final RexNode castFalseToInt = abstractCast(falseLiteral, tInt());
+    assertThat("CAST(FALSE AS INTEGER).isAlwaysFalse()",
+        castFalseToInt.isAlwaysFalse(), is(false));
+    assertThat("CAST(FALSE AS INTEGER).isAlwaysTrue()",
+        castFalseToInt.isAlwaysTrue(), is(false));
+  }
+
+  @Test void testIsAlwaysTrueCastBooleanToBoolean() {
+    // CAST(TRUE AS BOOLEAN) preserves the always-true property.
+    final RexNode castTrueToBool = abstractCast(trueLiteral, tBool());
+    assertThat("CAST(TRUE AS BOOLEAN).isAlwaysTrue()",
+        castTrueToBool.isAlwaysTrue(), is(true));
+  }
+
+  @Test void testEqualityWithCastBooleanLiteralNotSimplifiedIncorrectly() {
+    // "col = CAST(TRUE AS INTEGER)" must simplify to "col = 1", not to just "col".
+    // Before the fix, CAST(TRUE):INTEGER incorrectly returned isAlwaysTrue() == true,
+    // which triggered the "x = TRUE => x" rule and dropped the entire comparison.
+    final RexNode col = vIntNotNull();
+    final RexNode castTrueToInt = abstractCast(trueLiteral, tInt());
+    checkSimplify(eq(col, castTrueToInt), "=(?0.notNullInt0, 1)");
+  }
+
+  /** Unit tests for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2438">[CALCITE-2438]
    * RexCall#isAlwaysTrue returns incorrect result</a>. */
   @Test void testIsAlwaysTrueAndFalseXisNullisNotNullisFalse() {

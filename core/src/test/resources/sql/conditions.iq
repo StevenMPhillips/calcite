@@ -595,4 +595,32 @@ where 5 < cast(deptno as integer) OR 5 >= cast(deptno as integer) OR deptno IS N
 EnumerableTableScan(table=[[scott, EMP]])
 !plan
 
+# Test case for RexCall.isAlwaysTrue incorrectly delegating CAST to operand
+# regardless of result type.
+#
+# CAST(TRUE AS INTEGER) should evaluate to 1, so "a = CAST(TRUE AS INTEGER)"
+# must filter to rows where a = 1.
+#
+# Before the fix, RexCall.isAlwaysTrue() returned true for any CAST whose
+# *operand* was always-true, without checking that the CAST result type is
+# BOOLEAN. This caused RexSimplify's "x = TRUE => x" rule to fire, collapsing
+# the predicate to just "a" (an INTEGER used directly as a boolean), which
+# returned every non-zero row rather than only rows where a = 1.
+#
+# BABEL conformance is required because standard SQL does not permit
+# CAST(BOOLEAN AS INTEGER); that conversion is valid in dialects such as MySQL,
+# BigQuery, and Dremio, which is where the bug was originally observed.
+!use scott-babel
+
+with t(a) as (values (0), (1), (2))
+select * from t where a = cast(true as integer);
++---+
+| A |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
 # End conditions.iq
